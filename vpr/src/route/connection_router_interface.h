@@ -53,7 +53,8 @@ class ConnectionRouterInterface {
      * bool: should retry with full bounding box? (only used in parallel routing)
      * t_heap: heap element of cheapest path */
     virtual std::tuple<bool, bool, t_heap> timing_driven_route_connection_from_route_tree(
-        const RouteTreeNode& rt_root,
+        const RouteTree& tree,
+        RRNodeId source_node,
         RRNodeId sink_node,
         const t_conn_cost_params cost_params,
         t_bb bounding_box,
@@ -73,7 +74,8 @@ class ConnectionRouterInterface {
      * bool: should retry with full bounding box? (only used in parallel routing)
      * t_heap: heap element of cheapest path */
     virtual std::tuple<bool, bool, t_heap> timing_driven_route_connection_from_route_tree_high_fanout(
-        const RouteTreeNode& rt_root,
+        const RouteTree& tree,
+        RRNodeId source_node,
         RRNodeId sink_node,
         const t_conn_cost_params cost_params,
         t_bb bounding_box,
@@ -93,7 +95,7 @@ class ConnectionRouterInterface {
     // empty).  When using cost_params.astar_fac = 0, for efficiency the
     // RouterLookahead used should be the NoOpLookahead.
     virtual vtr::vector<RRNodeId, t_heap> timing_driven_find_all_shortest_paths_from_route_tree(
-        const RouteTreeNode& rt_root,
+        const RouteTree& tree,
         const t_conn_cost_params cost_params,
         t_bb bounding_box,
         RouterStats& router_stats,

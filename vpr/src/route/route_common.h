@@ -2,6 +2,7 @@
 #pragma once
 #include <vector>
 #include "clustered_netlist.h"
+#include "rr_node_types.h"
 #include "vtr_vector.h"
 #include "heap_type.h"
 #include "rr_node_fwd.h"
@@ -89,7 +90,7 @@ inline float get_single_rr_cong_cost(RRNodeId inode, float pres_fac) {
 
 void mark_ends(const Netlist<>& net_list, ParentNetId net_id);
 
-void mark_remaining_ends(ParentNetId net_id, const std::vector<int>& remaining_sinks);
+void mark_remaining_ends(ParentNetId net_id);
 
 void add_to_mod_list(RRNodeId inode, std::vector<RRNodeId>& modified_rr_node_inf);
 
@@ -220,4 +221,30 @@ void push_back_node_with_info(
     hptr->path_data->backward_delay = backward_path_delay;
 
     heap->push_back(hptr);
+}
+
+/** Is \p inode inside this bounding box?
+ * In the context of the parallel router, an inode is inside a bounding box
+ * if its driving side is in the bounding box. If it's not directional,
+ * we take the top left corner as reference */
+inline bool inside_bb(RRNodeId inode, const t_bb& bb) {
+    auto& device_ctx = g_vpr_ctx.device();
+    const auto& rr_graph = device_ctx.rr_graph;
+
+    int x = rr_graph.node_xlow(inode);
+    int y = rr_graph.node_ylow(inode);
+
+    return x >= bb.xmin && x <= bb.xmax && y >= bb.ymin && y <= bb.ymax;
+}
+
+/** When RCV is enabled, it's necessary to be able to completely ripup high fanout nets
+ * if there is still negative hold slack. Normally the router will prune the illegal
+ * branches of high fanout nets, this will bypass this */
+inline bool check_hold(const t_router_opts& router_opts, float worst_neg_slack) {
+    if (router_opts.routing_budgets_algorithm != YOYO) {
+        return false;
+    } else if (worst_neg_slack != 0) {
+        return true;
+    }
+    return false;
 }

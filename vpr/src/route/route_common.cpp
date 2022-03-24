@@ -309,11 +309,10 @@ bool try_route(const Netlist<>& net_list,
     return (success);
 }
 
+/** This routine checks to see if this is a resource-feasible routing.
+ * That is, are all rr_node capacity limitations respected?  It assumes
+ * that the occupancy arrays are up to date when it is called. */
 bool feasible_routing() {
-    /* This routine checks to see if this is a resource-feasible routing.      *
-     * That is, are all rr_node capacity limitations respected?  It assumes    *
-     * that the occupancy arrays are up to date when it is called.             */
-
     auto& device_ctx = g_vpr_ctx.device();
     const auto& rr_graph = device_ctx.rr_graph;
     auto& route_ctx = g_vpr_ctx.routing();
@@ -520,13 +519,14 @@ void mark_ends(const Netlist<>& net_list, ParentNetId net_id) {
     }
 }
 
-void mark_remaining_ends(ParentNetId net_id, const std::vector<int>& remaining_sinks) {
+void mark_remaining_ends(ParentNetId net_id) {
     // like mark_ends, but only performs it for the remaining sinks of a net
     RRNodeId inode;
 
     auto& route_ctx = g_vpr_ctx.mutable_routing();
+    const auto& tree = route_ctx.route_trees[net_id].value();
 
-    for (int sink_pin : remaining_sinks) {
+    for (int sink_pin : tree.get_remaining_isinks()) {
         inode = route_ctx.net_rr_terminals[net_id][sink_pin];
         ++route_ctx.rr_node_route_inf[inode].target_flag;
     }

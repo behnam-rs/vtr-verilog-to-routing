@@ -1390,6 +1390,8 @@ struct t_router_opts {
     bool flat_routing;
     bool has_choking_spot;
 
+    size_t num_workers;
+
     // Options related to rr_node reordering, for testing and possible cache optimization
     e_rr_node_reorder_algorithm reorder_rr_graph_nodes_algorithm = DONT_REORDER;
     int reorder_rr_graph_nodes_threshold = 0;
@@ -1790,6 +1792,7 @@ struct t_vpr_setup {
     e_clock_modeling clock_modeling;           ///<How clocks should be handled
     bool two_stage_clock_routing;              ///<How clocks should be routed in the presence of a dedicated clock network
     bool exit_before_pack;                     ///<Exits early before starting packing (useful for collecting statistics without running/loading any stages)
+    unsigned int num_workers;                  ///Maximum number of worker threads (determined from an env var or cmdline option)
 };
 
 class RouteStatus {

@@ -69,7 +69,8 @@ class ConnectionRouter : public ConnectionRouterInterface {
      * bool: should retry with full bounding box? (only used in parallel routing)
      * t_heap: heap element of cheapest path */
     std::tuple<bool, bool, t_heap> timing_driven_route_connection_from_route_tree(
-        const RouteTreeNode& rt_root,
+        const RouteTree& tree,
+        RRNodeId source_node,
         RRNodeId sink_node,
         const t_conn_cost_params cost_params,
         t_bb bounding_box,
@@ -88,7 +89,8 @@ class ConnectionRouter : public ConnectionRouterInterface {
      * bool: should retry with full bounding box? (only used in parallel routing)
      * t_heap: heap element of cheapest path */
     std::tuple<bool, bool, t_heap> timing_driven_route_connection_from_route_tree_high_fanout(
-        const RouteTreeNode& rt_root,
+        const RouteTree& tree,
+        RRNodeId source_node,
         RRNodeId sink_node,
         const t_conn_cost_params cost_params,
         t_bb net_bounding_box,
@@ -107,7 +109,7 @@ class ConnectionRouter : public ConnectionRouterInterface {
     // empty).  When using cost_params.astar_fac = 0, for efficiency the
     // RouterLookahead used should be the NoOpLookahead.
     vtr::vector<RRNodeId, t_heap> timing_driven_find_all_shortest_paths_from_route_tree(
-        const RouteTreeNode& rt_root,
+        const RouteTree& tree,
         const t_conn_cost_params cost_params,
         t_bb bounding_box,
         RouterStats& router_stats,
@@ -156,14 +158,16 @@ class ConnectionRouter : public ConnectionRouterInterface {
      * timing_driven_route_connection_from_route_tree_high_fanout for running
      * the connection router.
      * @param[in] rt_root RouteTreeNode describing the current routing state
+     * @param[in] source_node Source node ID to route from
      * @param[in] sink_node Sink node ID to route to
      * @param[in] cost_params
      * @param[in] bounding_box Keep search confined to this bounding box
      * @param[in] can_grow_bb Can this fn grow the given bounding box? 
-     * @return bool Signal to retry this connection with a full-device bounding box,
+     * @return bool Signal to retry this connection with a full-device bounding box.
      * @return t_heap* Heap element describing the path found. */
     std::tuple<bool, t_heap*> timing_driven_route_connection_common_setup(
-        const RouteTreeNode& rt_root,
+        const RouteTree& tree,
+        RRNodeId source_node,
         RRNodeId sink_node,
         const t_conn_cost_params cost_params,
         t_bb bounding_box,
@@ -242,6 +246,7 @@ class ConnectionRouter : public ConnectionRouterInterface {
     //used as branch-points for further routing.
     void add_route_tree_to_heap(const RouteTreeNode& rt_node,
                                 RRNodeId target_node,
+                                const t_bb& bounding_box,
                                 const t_conn_cost_params cost_params,
                                 bool from_high_fanout);
 
@@ -260,6 +265,7 @@ class ConnectionRouter : public ConnectionRouterInterface {
     void add_route_tree_node_to_heap(
         const RouteTreeNode& rt_node,
         RRNodeId target_node,
+        const t_bb& bounding_box,
         const t_conn_cost_params cost_params,
         bool is_high_fanout);
 
