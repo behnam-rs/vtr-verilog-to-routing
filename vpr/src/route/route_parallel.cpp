@@ -102,6 +102,13 @@ static bool try_parallel_route_tmpl(const Netlist<>& netlist,
                                     ScreenUpdatePriority first_iteration_priority,
                                     bool is_flat);
 
+
+template<typename ConnectionRouter>
+static RouteIterResults route_with_partition_tree(tbb::task_group& g, RouteIterCtx<ConnectionRouter>& ctx);
+
+template<typename ConnectionRouter>
+static RouteIterResults route_without_partition_tree(std::vector<ParentNetId>& nets_to_route, RouteIterCtx<ConnectionRouter>& ctx);
+
 /************************ Subroutine definitions *****************************/
 
 bool try_parallel_route(const Netlist<>& net_list,
@@ -326,12 +333,6 @@ bool try_parallel_route_tmpl(const Netlist<>& net_list,
             is_flat);
     }
 
-    /* Build partition tree for parallel routing */
-    vtr::Timer t;
-    PartitionTree partition_tree(net_list);
-    float total_prep_time = t.elapsed_sec();
-    VTR_LOG("# Built partition tree in %f seconds\n", total_prep_time);
-
     tbb::task_group tbb_task_group;
 
     /* Set up thread local storage.
@@ -414,7 +415,9 @@ bool try_parallel_route_tmpl(const Netlist<>& net_list,
             choking_spots,
             is_flat};
 
-        RouteIterResults iter_results = route_partition_tree(tbb_task_group, partition_tree, iter_ctx);
+        vtr::Timer net_routing_timer;
+        RouteIterResults iter_results = route_with_partition_tree(tbb_task_group, iter_ctx);
+        PartitionTreeDebug::log("Routing all nets took " + std::to_string(net_routing_timer.elapsed_sec()) + " s");
 
         if (!iter_results.is_routable) {
             return false; // Impossible to route
@@ -478,6 +481,7 @@ bool try_parallel_route_tmpl(const Netlist<>& net_list,
 
         //Output progress
         print_route_status(itry, iter_elapsed_time, pres_fac, num_net_bounding_boxes_updated, iter_results.stats, overuse_info, wirelength_info, timing_info, est_success_iteration);
+        PartitionTreeDebug::log("Iteration " + std::to_string(itry) + " took " + std::to_string(iter_elapsed_time) + " s");
 
         prev_iter_cumm_time = iter_cumm_time;
 
@@ -593,8 +597,7 @@ bool try_parallel_route_tmpl(const Netlist<>& net_list,
          */
 
         if (router_opts.route_bb_update == e_route_bb_update::DYNAMIC) {
-            /** TODO: Disabled BB scaling for the baseline parallel router. Should re-enable it by building/updating partition tree on every iteration */
-            // num_net_bounding_boxes_updated = dynamic_update_bounding_boxes(iter_results.rerouted_nets, net_list, router_opts.high_fanout_threshold);
+            num_net_bounding_boxes_updated = dynamic_update_bounding_boxes(iter_results.rerouted_nets, net_list, router_opts.high_fanout_threshold);
         }
 
         if (itry >= high_effort_congestion_mode_iteration_threshold) {
@@ -665,8 +668,7 @@ bool try_parallel_route_tmpl(const Netlist<>& net_list,
                 //Scale by BB_SCALE_FACTOR but clip to grid size to avoid overflow
                 bb_fac = std::min<int>(max_grid_dim, bb_fac * BB_SCALE_FACTOR);
 
-                /** TODO: Disabled BB scaling for the baseline parallel router. Should re-enable it by building/updating partition tree on every iteration */
-                // route_ctx.route_bb = load_route_bb(net_list, bb_fac);
+                route_ctx.route_bb = load_route_bb(net_list, bb_fac);
             }
 
             ++itry_conflicted_mode;
@@ -795,6 +797,7 @@ bool try_parallel_route_tmpl(const Netlist<>& net_list,
     VTR_LOG("total_number_of_adding_all_rt_from_calling_high_fanout_rt: %zu ", router_stats.add_all_rt_from_high_fanout);
     VTR_LOG("\n");
 
+    PartitionTreeDebug::write("partition_tree.log");
     return routing_is_successful;
 }
 
@@ -835,7 +838,6 @@ NetResultFlags try_parallel_route_net(ConnectionRouter& router,
         reroute_for_hold = (budgeting_inf.get_should_reroute(net_id));
         reroute_for_hold &= worst_negative_slack != 0;
     }
-
     if (route_ctx.net_status.is_fixed(net_id)) { /* Skip pre-routed nets. */
         flags.success = true;
     } else if (net_list.net_is_ignored(net_id)) { /* Skip ignored nets. */
@@ -878,6 +880,7 @@ NetResultFlags try_parallel_route_net(ConnectionRouter& router,
 
         flags.was_rerouted = true; //Flag to record whether routing was actually changed
     }
+
     return flags;
 }
 
@@ -894,8 +897,6 @@ void route_partition_tree_helper(tbb::task_group& g,
 
     node.is_routable = true;
     node.rerouted_nets.clear();
-
-    std::cout << "routing node with " << node.nets.size() << " nets\n";
 
     vtr::Timer t;
     for (auto net_id : node.nets) {
@@ -933,7 +934,8 @@ void route_partition_tree_helper(tbb::task_group& g,
             nets_to_retry[net_id] = true;
         }
     }
-    node.exec_times.push_back(t.elapsed_sec());
+
+    PartitionTreeDebug::log("Node with " + std::to_string(node.nets.size()) + " nets routed in " + std::to_string(t.elapsed_sec()) + " s");
 
     /* add left and right trees to task queue */
     if (node.left && node.right) {
@@ -944,7 +946,7 @@ void route_partition_tree_helper(tbb::task_group& g,
             route_partition_tree_helper(g, *node.right, ctx, nets_to_retry);
         });
     } else {
-        VTR_ASSERT(!node.left && !node.right); // tree should have been built perfectly balanced
+        VTR_ASSERT(!node.left && !node.right); // there shouldn't be a node with a single branch
     }
 }
 
@@ -1000,6 +1002,64 @@ RouteIterResults route_partition_tree(tbb::task_group& g,
     for (auto& thread_stats : ctx.router_stats) {
         update_router_stats(out.stats, thread_stats);
     }
+    return out;
+}
+
+/* Build a partition tree and route with it */
+template<typename ConnectionRouter>
+static RouteIterResults route_with_partition_tree(tbb::task_group& g, RouteIterCtx<ConnectionRouter>& ctx){
+    vtr::Timer t2;
+    PartitionTree partition_tree(ctx.net_list);
+    float total_prep_time = t2.elapsed_sec();
+    VTR_LOG("# Built partition tree in %f seconds\n", total_prep_time);
+
+    return route_partition_tree(g, partition_tree, ctx);
+}
+
+/* Route serially */
+template<typename ConnectionRouter>
+static RouteIterResults route_without_partition_tree(std::vector<ParentNetId>& nets_to_route, RouteIterCtx<ConnectionRouter>& ctx){
+    RouteIterResults out;
+
+    std::cout << "routing " << nets_to_route.size() << " nets serially\n";
+
+    /* Sort so net with most sinks is routed first. */
+    std::sort(nets_to_route.begin(), nets_to_route.end(), [&](const ParentNetId id1, const ParentNetId id2) -> bool {
+        return ctx.net_list.net_sinks(id1).size() > ctx.net_list.net_sinks(id2).size();
+    });
+
+    for (auto net_id : nets_to_route) {
+        auto flags = try_timing_driven_route_net(
+            ctx.routers.local(),
+            ctx.net_list,
+            net_id,
+            ctx.itry,
+            ctx.pres_fac,
+            ctx.router_opts,
+            ctx.connections_inf,
+            ctx.router_stats.local(),
+            ctx.route_structs.local().pin_criticality,
+            ctx.route_structs.local().rt_node_of_sink,
+            ctx.net_delay,
+            ctx.netlist_pin_lookup,
+            ctx.timing_info,
+            ctx.pin_timing_invalidator,
+            ctx.budgeting_inf,
+            ctx.worst_negative_slack,
+            ctx.routing_predictor,
+            ctx.choking_spots[net_id],
+            ctx.is_flat);
+
+        if (!flags.success) {
+            out.is_routable = false;
+        }
+        if (flags.was_rerouted) {
+            out.rerouted_nets.push_back(net_id);
+        }
+    }
+
+    update_router_stats(out.stats, ctx.router_stats.local());
+
     return out;
 }
 

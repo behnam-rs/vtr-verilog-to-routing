@@ -15,81 +15,84 @@ std::unique_ptr<PartitionTreeNode> PartitionTree::build_helper(const Netlist<>& 
     const auto& route_ctx = g_vpr_ctx.routing();
     auto out = std::make_unique<PartitionTreeNode>();
 
-    /* Find best cutline. In ParaDRo this is done using prefix sums, but
-     * life is too short to implement them, therefore I'm just doing a linear search,
-     * and the complexity is O((fpga width + height) * #nets * log2(w+h * #nets)).
-     * What we are searching for is the cutline with the most balanced workload (# of fanouts)
-     * on the sides. */
-    int left, right, mine;
-    int score;
-    /* TODO: maybe put all of this into a tuple or struct? */
+    /* Build ParaDRo-ish prefix sum lookup for each bin (coordinate) in the device.
+     * Do this for every step with only given nets, because each cutline takes some nets out
+     * of the game, so if we just built a global lookup it wouldn't yield accurate results.
+     *
+     * VPR's bounding boxes include the borders (see ConnectionRouter::timing_driven_expand_neighbour())
+     * so try to include x=bb.xmax, y=bb.ymax etc. when calculating things. */
+    int W = x2 - x1;
+    int H = y2 - y1;
+    VTR_ASSERT(W > 0 && H > 0);
+    std::vector<int> x_total_before(W, 0), x_total_after(W, 0);
+    std::vector<int> y_total_before(H, 0), y_total_after(H, 0);
+    for (auto net_id : nets) {
+        t_bb bb = route_ctx.route_bb[net_id];
+        size_t fanouts = netlist.net_sinks(net_id).size();
+
+        /* Start and end coords relative to x1. Clamp to [x1, x2]. */
+        int x_start = std::max(x1, bb.xmin) - x1;
+        int x_end = std::min(bb.xmax+1, x2) - x1;
+        for(int x = x_start; x < W; x++){
+            x_total_before[x] += fanouts;
+        }
+        for(int x = 0; x < x_end; x++){
+            x_total_after[x] += fanouts;
+        }
+        int y_start = std::max(y1, bb.ymin) - y1;
+        int y_end = std::min(bb.ymax+1, y2) - y1;
+        for(int y = y_start; y < H; y++){
+            y_total_before[y] += fanouts;
+        }
+        for(int y = 0; y < y_end; y++){
+            y_total_after[y] += fanouts;
+        }
+    }
+
     int best_score = std::numeric_limits<int>::max();
-    int best_pos = -1, best_left = -1, best_right = -1;
-    enum { X,
-           Y } best_axis
-        = X;
+    int best_pos = -1;
+    PartitionTreeNode::Axis best_axis = PartitionTreeNode::X;
 
-    for (int x = x1 + 1; x < x2; x++) {
-        left = right = mine = 0;
-        for (auto net_id : nets) {
-            t_bb bb = route_ctx.route_bb[net_id];
-            size_t fanout = netlist.net_sinks(net_id).size();
-            if (bb.xmin < x && bb.xmax < x) {
-                left += fanout;
-            } else if (bb.xmin > x && bb.xmax > x) {
-                right += fanout;
-            } else if (bb.xmin <= x && bb.xmax >= x) {
-                mine += fanout;
-            } else {
-                VTR_ASSERT(false); /* unreachable */
-            }
-        }
-        score = abs(left - right);
+    int max_x_before = x_total_before[W-1];
+    int max_x_after = x_total_after[0];
+    for(int x=0; x<W; x++){
+        int before = x_total_before[x];
+        int after = x_total_after[x];
+        if(before == max_x_before || after == max_x_after)  /* Cutting here would leave no nets to the left or right */
+            continue;
+        int score = abs(x_total_before[x] - x_total_after[x]);
         if (score < best_score) {
             best_score = score;
-            best_left = left;
-            best_right = right;
-            best_pos = x;
-            best_axis = X;
-        }
-    }
-    for (int y = y1 + 1; y < y2; y++) {
-        left = right = mine = 0;
-        for (auto net_id : nets) {
-            t_bb bb = route_ctx.route_bb[net_id];
-            size_t fanout = netlist.net_sinks(net_id).size();
-            if (bb.ymin < y && bb.ymax < y) {
-                left += fanout;
-            } else if (bb.ymin > y && bb.ymax > y) {
-                right += fanout;
-            } else if (bb.ymin <= y && bb.ymax >= y) {
-                mine += fanout;
-            } else {
-                VTR_ASSERT(false); /* unreachable */
-            }
-        }
-        score = abs(left - right);
-        if (score < best_score) {
-            best_score = score;
-            best_left = left;
-            best_right = right;
-            best_pos = y;
-            best_axis = Y;
+            best_pos = x1 + x; /* Lookups are relative to (x1, y1) */
+            best_axis = PartitionTreeNode::X;
         }
     }
 
-    /* If one of the sides has 0 nets in the best arrangement,
-     * there's no use in partitioning this: no parallelism comes out of it. */
-    if (best_left == 0 || best_right == 0) {
-        out->nets = std::move(nets);
+    int max_y_before = y_total_before[H-1];
+    int max_y_after = y_total_after[0];
+    for(int y=0; y<H; y++){
+        int before = y_total_before[y];
+        int after = y_total_after[y];
+        if(before == max_y_before || after == max_y_after)  /* Cutting here would leave no nets to the left or right (sideways) */
+            continue;
+        int score = abs(y_total_before[y] - y_total_after[y]);
+        if (score < best_score) {
+            best_score = score;
+            best_pos = y1 + y; /* Lookups are relative to (x1, y1) */
+            best_axis = PartitionTreeNode::Y;
+        }
+    }
+
+    /* Couldn't find a cutline: all cutlines result in a one-way cut */
+    if (best_pos == -1) {
+        out->nets = nets;  /* We hope copy elision is smart enough to optimize this stuff out */
         return out;
     }
 
-    /* Populate net IDs on each side
-     * and call next level of build_partition_trees. */
+    /* Populate net IDs on each side and call next level of build_x */
     std::vector<ParentNetId> left_nets, right_nets, my_nets;
 
-    if (best_axis == X) {
+    if (best_axis == PartitionTreeNode::X) {
         for (auto net_id : nets) {
             t_bb bb = route_ctx.route_bb[net_id];
             if (bb.xmin < best_pos && bb.xmax < best_pos) {
@@ -106,7 +109,7 @@ std::unique_ptr<PartitionTreeNode> PartitionTree::build_helper(const Netlist<>& 
         out->left = build_helper(netlist, left_nets, x1, y1, best_pos, y2);
         out->right = build_helper(netlist, right_nets, best_pos, y2, x2, y2);
     } else {
-        VTR_ASSERT(best_axis == Y);
+        VTR_ASSERT(best_axis == PartitionTreeNode::Y);
         for (auto net_id : nets) {
             t_bb bb = route_ctx.route_bb[net_id];
             if (bb.ymin < best_pos && bb.ymax < best_pos) {
@@ -124,7 +127,7 @@ std::unique_ptr<PartitionTreeNode> PartitionTree::build_helper(const Netlist<>& 
         out->right = build_helper(netlist, right_nets, x1, y1, x2, best_pos);
     }
 
-    out->nets = std::move(my_nets);
+    out->nets = my_nets;
     out->cutline_axis = best_axis;
     out->cutline_pos = best_pos;
     return out;

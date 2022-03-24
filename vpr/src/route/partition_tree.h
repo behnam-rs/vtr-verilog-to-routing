@@ -40,9 +40,9 @@ class PartitionTreeNode {
     std::vector<ParentNetId> rerouted_nets;
 
     /* debug stuff */
-    int cutline_axis = -1;
+    typedef enum {X, Y} Axis;
+    Axis cutline_axis = X;
     int cutline_pos = -1;
-    std::vector<float> exec_times;
 };
 
 /** Holds the root PartitionTreeNode and exposes top level operations. */
@@ -64,3 +64,29 @@ class PartitionTree {
     std::unique_ptr<PartitionTreeNode> _root;
     std::unique_ptr<PartitionTreeNode> build_helper(const Netlist<>& netlist, const std::vector<ParentNetId>& nets, int x1, int y1, int x2, int y2);
 };
+
+#ifdef VTR_DEBUG_PARTITION_TREE
+/** Log PartitionTree-related messages. Can handle multiple threads. */
+class PartitionTreeDebug {
+  public:
+    static tbb::concurrent_vector<std::string> lines;
+    /** Add msg to the log buffer (with a thread ID header) */
+    static void log(std::string msg){
+      lines.push_back("[thread " + std::to_string(std::this_thread::get_id()) + "] " + msg);
+    }
+    /** Write out the log buffer into a file */
+    static void write(std::string filename){
+      std::ofstream f(filename);
+      for(auto& line: lines){
+        f << line << std::endl;
+      }
+      f.close();
+    }
+};
+#else
+class PartitionTreeDebug {
+  public:
+    static void log(std::string /* msg */){}
+    static void write(std::string /* filename */){}
+};
+#endif
