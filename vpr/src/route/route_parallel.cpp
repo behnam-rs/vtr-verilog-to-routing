@@ -102,7 +102,6 @@ static bool try_parallel_route_tmpl(const Netlist<>& netlist,
                                     ScreenUpdatePriority first_iteration_priority,
                                     bool is_flat);
 
-
 template<typename ConnectionRouter>
 static RouteIterResults route_with_partition_tree(tbb::task_group& g, RouteIterCtx<ConnectionRouter>& ctx);
 
@@ -1007,7 +1006,7 @@ RouteIterResults route_partition_tree(tbb::task_group& g,
 
 /* Build a partition tree and route with it */
 template<typename ConnectionRouter>
-static RouteIterResults route_with_partition_tree(tbb::task_group& g, RouteIterCtx<ConnectionRouter>& ctx){
+static RouteIterResults route_with_partition_tree(tbb::task_group& g, RouteIterCtx<ConnectionRouter>& ctx) {
     vtr::Timer t2;
     PartitionTree partition_tree(ctx.net_list);
     float total_prep_time = t2.elapsed_sec();
@@ -1018,10 +1017,9 @@ static RouteIterResults route_with_partition_tree(tbb::task_group& g, RouteIterC
 
 /* Route serially */
 template<typename ConnectionRouter>
-static RouteIterResults route_without_partition_tree(std::vector<ParentNetId>& nets_to_route, RouteIterCtx<ConnectionRouter>& ctx){
+static RouteIterResults route_without_partition_tree(std::vector<ParentNetId>& nets_to_route, RouteIterCtx<ConnectionRouter>& ctx) {
     RouteIterResults out;
 
-    std::cout << "routing " << nets_to_route.size() << " nets serially\n";
 
     /* Sort so net with most sinks is routed first. */
     std::sort(nets_to_route.begin(), nets_to_route.end(), [&](const ParentNetId id1, const ParentNetId id2) -> bool {

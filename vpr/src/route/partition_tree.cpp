@@ -32,19 +32,19 @@ std::unique_ptr<PartitionTreeNode> PartitionTree::build_helper(const Netlist<>& 
 
         /* Start and end coords relative to x1. Clamp to [x1, x2]. */
         int x_start = std::max(x1, bb.xmin) - x1;
-        int x_end = std::min(bb.xmax+1, x2) - x1;
-        for(int x = x_start; x < W; x++){
+        int x_end = std::min(bb.xmax + 1, x2) - x1;
+        for (int x = x_start; x < W; x++) {
             x_total_before[x] += fanouts;
         }
-        for(int x = 0; x < x_end; x++){
+        for (int x = 0; x < x_end; x++) {
             x_total_after[x] += fanouts;
         }
         int y_start = std::max(y1, bb.ymin) - y1;
-        int y_end = std::min(bb.ymax+1, y2) - y1;
-        for(int y = y_start; y < H; y++){
+        int y_end = std::min(bb.ymax + 1, y2) - y1;
+        for (int y = y_start; y < H; y++) {
             y_total_before[y] += fanouts;
         }
-        for(int y = 0; y < y_end; y++){
+        for (int y = 0; y < y_end; y++) {
             y_total_after[y] += fanouts;
         }
     }
@@ -53,12 +53,12 @@ std::unique_ptr<PartitionTreeNode> PartitionTree::build_helper(const Netlist<>& 
     int best_pos = -1;
     PartitionTreeNode::Axis best_axis = PartitionTreeNode::X;
 
-    int max_x_before = x_total_before[W-1];
+    int max_x_before = x_total_before[W - 1];
     int max_x_after = x_total_after[0];
-    for(int x=0; x<W; x++){
+    for (int x = 0; x < W; x++) {
         int before = x_total_before[x];
         int after = x_total_after[x];
-        if(before == max_x_before || after == max_x_after)  /* Cutting here would leave no nets to the left or right */
+        if (before == max_x_before || after == max_x_after) /* Cutting here would leave no nets to the left or right */
             continue;
         int score = abs(x_total_before[x] - x_total_after[x]);
         if (score < best_score) {
@@ -68,12 +68,12 @@ std::unique_ptr<PartitionTreeNode> PartitionTree::build_helper(const Netlist<>& 
         }
     }
 
-    int max_y_before = y_total_before[H-1];
+    int max_y_before = y_total_before[H - 1];
     int max_y_after = y_total_after[0];
-    for(int y=0; y<H; y++){
+    for (int y = 0; y < H; y++) {
         int before = y_total_before[y];
         int after = y_total_after[y];
-        if(before == max_y_before || after == max_y_after)  /* Cutting here would leave no nets to the left or right (sideways) */
+        if (before == max_y_before || after == max_y_after) /* Cutting here would leave no nets to the left or right (sideways) */
             continue;
         int score = abs(y_total_before[y] - y_total_after[y]);
         if (score < best_score) {
@@ -85,7 +85,7 @@ std::unique_ptr<PartitionTreeNode> PartitionTree::build_helper(const Netlist<>& 
 
     /* Couldn't find a cutline: all cutlines result in a one-way cut */
     if (best_pos == -1) {
-        out->nets = nets;  /* We hope copy elision is smart enough to optimize this stuff out */
+        out->nets = nets; /* We hope copy elision is smart enough to optimize this stuff out */
         return out;
     }
 
@@ -107,7 +107,7 @@ std::unique_ptr<PartitionTreeNode> PartitionTree::build_helper(const Netlist<>& 
         }
 
         out->left = build_helper(netlist, left_nets, x1, y1, best_pos, y2);
-        out->right = build_helper(netlist, right_nets, best_pos, y2, x2, y2);
+        out->right = build_helper(netlist, right_nets, best_pos, y1, x2, y2);
     } else {
         VTR_ASSERT(best_axis == PartitionTreeNode::Y);
         for (auto net_id : nets) {

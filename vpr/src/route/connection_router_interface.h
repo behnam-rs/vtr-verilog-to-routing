@@ -6,7 +6,6 @@
 #include "heap_type.h"
 #include "route_tree_fwd.h"
 #include "rr_graph_fwd.h"
-#include "rr_graph_fwd.h"
 #include "vpr_types.h"
 #include "router_stats.h"
 #include "spatial_route_tree_lookup.h"

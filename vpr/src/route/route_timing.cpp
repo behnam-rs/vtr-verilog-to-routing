@@ -1370,8 +1370,8 @@ static void setup_routing_resources(int itry,
     /* Build and return a partial route tree from the legal connections from last iteration.
      * along the way do:
      * 	update pathfinder costs to be accurate to the partial route tree
-     * 	find and store the pins that still need to be reached in incremental_rerouting_resources.remaining_targets
-     * 	find and store the rt nodes that have been reached in incremental_rerouting_resources.reached_rt_sinks
+     * 	find and store the pins that still need to be reached in connections_inf.remaining_targets
+     * 	find and store the rt nodes that have been reached in connections_inf.reached_rt_sinks
      *	mark the rr_node sinks as targets to be reached. */
     auto& route_ctx = g_vpr_ctx.mutable_routing();
 
@@ -1447,7 +1447,7 @@ static void setup_routing_resources(int itry,
 
         profiling::net_rebuild_end(num_sinks, remaining_targets.size());
 
-        // still need to calculate the tree's time delay (0 Tarrival means from SOURCE)
+        // still need to calculate the tree's time delay
         tree.value().reload_timing();
 
         // check for R_upstream C_downstream and edge correctness

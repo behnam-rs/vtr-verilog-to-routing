@@ -1,20 +1,24 @@
 """
 Module that contains the task functions
 """
+import itertools
+
 from pathlib import Path
 from pathlib import PurePath
 from shlex import split
-import itertools
+
+from typing import List, Tuple
 
 from vtr import (
     VtrError,
     InspectError,
     load_list_file,
     load_parse_results,
+    get_existing_run_dir,
+    get_latest_run_dir,
     get_next_run_dir,
     find_task_dir,
     load_script_param,
-    get_latest_run_dir,
     paths,
 )
 
@@ -82,7 +86,7 @@ class TaskConfig:
 
 class Job:
     """
-    A class to store the nessesary information for a job that needs to be run.
+    A class to store the necessary information for a job that needs to be run.
     """
 
     def __init__(
@@ -169,7 +173,7 @@ class Job:
         """
         return self._qor_parse_command
 
-    def work_dir(self, run_dir):
+    def work_dir(self, run_dir: str) -> str:
         """
         return the work directory of the job
         """
@@ -179,7 +183,7 @@ class Job:
 # pylint: enable=too-many-instance-attributes
 
 
-def load_task_config(config_file):
+def load_task_config(config_file) -> TaskConfig:
     """
     Load task config information
     """
@@ -245,7 +249,7 @@ def load_task_config(config_file):
         else:
             # All valid keys should have been collected by now
             raise VtrError(
-                "Unrecognzied key '{key}' in config file {file}".format(key=key, file=config_file)
+                "Unrecognized key '{key}' in config file {file}".format(key=key, file=config_file)
             )
 
     # We split the script params into a list
@@ -351,7 +355,7 @@ def create_second_parse_cmd(config):
     return second_parse_cmd
 
 
-def create_cmd(abs_circuit_filepath, abs_arch_filepath, config, args, circuit, noc_traffic):
+def create_cmd(abs_circuit_filepath, abs_arch_filepath, config, args, circuit, noc_traffic) -> Tuple:
     """ Create the command to run the task """
     # Collect any extra script params from the config file
     cmd = [abs_circuit_filepath, abs_arch_filepath]
@@ -410,6 +414,15 @@ def create_cmd(abs_circuit_filepath, abs_arch_filepath, config, args, circuit, n
 
         cmd += ["--fix_clusters", "{}".format(place_constr_file)]
 
+    if args.write_rr_graphs:
+        cmd += ["--write_rr_graph", "{}.rr_graph.xml".format(Path(circuit).stem)]  # Use XML format instead of capnp (see #2352)
+
+    if args.write_lookaheads:
+        cmd += ["--write_router_lookahead", "{}.lookahead.bin".format(Path(circuit).stem)]
+
+    if args.write_rr_graphs or args.write_lookaheads:  # Don't trigger a second run, we just want the files
+        cmd += ["-no_second_run"]
+
     parse_cmd = None
     qor_parse_command = None
     if config.parse_file:
@@ -446,7 +459,7 @@ def create_cmd(abs_circuit_filepath, abs_arch_filepath, config, args, circuit, n
 
 
 # pylint: disable=too-many-branches
-def create_jobs(args, configs, after_run=False):
+def create_jobs(args, configs, after_run=False) -> List[Job]:
     """
     Create the jobs to be executed depending on the configs.
     """
@@ -539,7 +552,7 @@ def create_job(
     work_dir,
     run_dir,
     golden_results,
-):
+) -> Job:
     """
     Create an individual job with the specified parameters
     """
@@ -606,6 +619,14 @@ def create_job(
         current_qor_parse_command.insert(0, run_dir + "/{}".format(load_script_param(param)))
     current_cmd = cmd.copy()
     current_cmd += ["-temp_dir", run_dir + "/{}".format(param_string)]
+
+    if args.use_previous:
+        for run_dir, [extension, option] in args.use_previous:
+            prev_work_path = Path(get_existing_run_dir(find_task_dir(config, args.alt_tasks_dir), run_dir)) / work_dir / param_string
+            prev_file = prev_work_path / "{}.{}".format(Path(circuit).stem, extension)
+            if not prev_file.exists():
+                raise FileNotFoundError("use_previous: file %s not found" % str(prev_file))
+            current_cmd += [option, str(prev_file)]
 
     if param_string != "common":
         current_cmd += param.split(" ")
