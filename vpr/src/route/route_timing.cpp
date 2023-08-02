@@ -1873,6 +1873,8 @@ size_t dynamic_update_bounding_boxes(const std::vector<ParentNetId>& updated_net
     for (ParentNetId net : updated_nets) {
         if (!route_ctx.route_trees[net])
             continue; // Skip if no routing
+        if (!route_ctx.net_status.is_routed(net))
+            continue;
 
         //We do not adjust the bounding boxes of high fanout nets, since they
         //use different bounding boxes based on the target location.

@@ -419,7 +419,7 @@ def create_cmd(
     if args.write_rr_graphs:
         cmd += [
             "--write_rr_graph",
-            "{}.rr_graph.xml".format(Path(circuit).stem)
+            "{}.rr_graph.xml".format(Path(circuit).stem),
         ]  # Use XML format instead of capnp (see #2352)
 
     if args.write_lookaheads:
