@@ -354,6 +354,7 @@ def create_second_parse_cmd(config):
 
     return second_parse_cmd
 
+
 # pylint: disable=too-many-branches
 def create_cmd(
     abs_circuit_filepath, abs_arch_filepath, config, args, circuit, noc_traffic
