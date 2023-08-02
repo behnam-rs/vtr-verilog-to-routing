@@ -4,14 +4,12 @@
 #include "router_stats.h"
 
 #include <fstream>
+#include <memory>
 #include <thread>
 
 #ifdef VPR_USE_TBB
 #    include <tbb/concurrent_vector.h>
 #endif
-
-/** Print output from PartitionTreeDebug? */
-#define DEBUG_PARTITION_TREE
 
 /** Routing iteration results per thread. (for a subset of the input netlist) */
 struct RouteIterResults {
@@ -76,12 +74,12 @@ class PartitionTree {
     std::unique_ptr<PartitionTreeNode> build_helper(const Netlist<>& netlist, const std::vector<ParentNetId>& nets, int x1, int y1, int x2, int y2);
 };
 
-#ifdef DEBUG_PARTITION_TREE
+#ifdef VPR_DEBUG_PARTITION_TREE
 /** Log PartitionTree-related messages. Can handle multiple threads. */
 class PartitionTreeDebug {
   public:
 #    ifdef VPR_USE_TBB
-    static inline tbb::concurrent_vector<std::string> lines;
+    static inline tbb::concurrent_vector<std::string, tbb::cache_aligned_allocator<std::string>> lines;
 #    else
     static inline std::vector<std::string> lines;
 #    endif

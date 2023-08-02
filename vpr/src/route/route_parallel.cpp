@@ -33,7 +33,6 @@
 
 #    include "tbb/enumerable_thread_specific.h"
 #    include "tbb/task_group.h"
-#    include "tbb/global_control.h"
 
 /** route_net and similar functions need many bits of state collected from various
  * parts of VPR, collect them here for ease of use */
@@ -1019,7 +1018,6 @@ static RouteIterResults route_with_partition_tree(tbb::task_group& g, RouteIterC
 template<typename ConnectionRouter>
 static RouteIterResults route_without_partition_tree(std::vector<ParentNetId>& nets_to_route, RouteIterCtx<ConnectionRouter>& ctx) {
     RouteIterResults out;
-
 
     /* Sort so net with most sinks is routed first. */
     std::sort(nets_to_route.begin(), nets_to_route.end(), [&](const ParentNetId id1, const ParentNetId id2) -> bool {
