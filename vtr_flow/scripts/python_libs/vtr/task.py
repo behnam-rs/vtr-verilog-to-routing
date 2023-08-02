@@ -355,7 +355,9 @@ def create_second_parse_cmd(config):
     return second_parse_cmd
 
 
-def create_cmd(abs_circuit_filepath, abs_arch_filepath, config, args, circuit, noc_traffic) -> Tuple:
+def create_cmd(
+    abs_circuit_filepath, abs_arch_filepath, config, args, circuit, noc_traffic
+) -> Tuple:
     """ Create the command to run the task """
     # Collect any extra script params from the config file
     cmd = [abs_circuit_filepath, abs_arch_filepath]
@@ -415,12 +417,16 @@ def create_cmd(abs_circuit_filepath, abs_arch_filepath, config, args, circuit, n
         cmd += ["--fix_clusters", "{}".format(place_constr_file)]
 
     if args.write_rr_graphs:
-        cmd += ["--write_rr_graph", "{}.rr_graph.xml".format(Path(circuit).stem)]  # Use XML format instead of capnp (see #2352)
+        cmd += [
+            "--write_rr_graph",
+            "{}.rr_graph.xml".format(Path(circuit).stem)
+        ]  # Use XML format instead of capnp (see #2352)
 
     if args.write_lookaheads:
         cmd += ["--write_router_lookahead", "{}.lookahead.bin".format(Path(circuit).stem)]
 
-    if args.write_rr_graphs or args.write_lookaheads:  # Don't trigger a second run, we just want the files
+    if args.write_rr_graphs or args.write_lookaheads:
+        # Don't trigger a second run, we just want the files
         cmd += ["-no_second_run"]
 
     parse_cmd = None
@@ -622,7 +628,8 @@ def create_job(
 
     if args.use_previous:
         for run_dir, [extension, option] in args.use_previous:
-            prev_work_path = Path(get_existing_run_dir(find_task_dir(config, args.alt_tasks_dir), run_dir)) / work_dir / param_string
+            prev_run_dir = get_existing_run_dir(find_task_dir(config, args.alt_tasks_dir), run_dir)
+            prev_work_path = Path(prev_run_dir) / work_dir / param_string
             prev_file = prev_work_path / "{}.{}".format(Path(circuit).stem, extension)
             if not prev_file.exists():
                 raise FileNotFoundError("use_previous: file %s not found" % str(prev_file))

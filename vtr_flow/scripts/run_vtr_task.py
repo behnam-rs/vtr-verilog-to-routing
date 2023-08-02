@@ -48,6 +48,7 @@ from vtr.error import VtrError, InspectError, CommandError
 
 # pylint: enable=wrong-import-position, import-error
 
+
 def vtr_command_argparser(prog=None):
     """Argument parse for run_vtr_task"""
 
@@ -210,7 +211,7 @@ def vtr_command_argparser(prog=None):
         default=False,
         action="store_true",
         help="Write out rr_graph files from VPR. These are normally computed on the fly and can become very large."
-        "Typically used with -use_previous [...] to save time on later executions for large tasks."
+        "Typically used with -use_previous [...] to save time on later executions for large tasks.",
     )
 
     parser.add_argument(
@@ -218,7 +219,7 @@ def vtr_command_argparser(prog=None):
         default=False,
         action="store_true",
         help="Write out router lookahead files from VPR. These are normally computed on the fly and can become very large."
-        "Typically used with -use_previous [...] to save time on later executions for large tasks."
+        "Typically used with -use_previous [...] to save time on later executions for large tasks.",
     )
 
     parser.add_argument(
@@ -226,9 +227,9 @@ def vtr_command_argparser(prog=None):
         default=None,
         type=argparse_use_previous,
         help="Reuse intermediate [file]s from previous [run]s of the tasks. Accepts a comma separated list of [run]:[file]"
-        "such as \"-use_previous run001:place,run001:net,run001:rr_graph\"."
-        "Works throughout different config parameters: \"common\" will reuse \"common\"'s files etc."
-        "Use with caution and try to validate your results with a clean run."
+        'such as "-use_previous run001:place,run001:net,run001:rr_graph".'
+        'Works throughout different config parameters: "common" will reuse "common"\'s files etc.'
+        "Use with caution and try to validate your results with a clean run.",
     )
 
     parser.add_argument(

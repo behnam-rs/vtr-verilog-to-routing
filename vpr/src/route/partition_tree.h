@@ -79,7 +79,7 @@ class PartitionTree {
 class PartitionTreeDebug {
   public:
 #    ifdef VPR_USE_TBB
-    static inline tbb::concurrent_vector<std::string, tbb::cache_aligned_allocator<std::string>> lines;
+    static inline tbb::concurrent_vector<std::string> lines;
 #    else
     static inline std::vector<std::string> lines;
 #    endif

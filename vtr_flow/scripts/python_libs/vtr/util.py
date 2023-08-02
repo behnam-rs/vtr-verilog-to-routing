@@ -20,6 +20,7 @@ from vtr import paths
 
 from typing import List, Tuple
 
+
 class RawDefaultHelpFormatter(
     argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter
 ):
@@ -432,6 +433,7 @@ def format_elapsed_time(time_delta):
     """
     return "%.2f seconds" % time_delta.total_seconds()
 
+
 # Files that can be read back by VPR with their conventional extensions
 # and the command line option to read them.
 REUSABLE_FILES = {
@@ -439,7 +441,7 @@ REUSABLE_FILES = {
     "place": ["place", "--place_file"],
     "route": ["route", "--route_file"],
     "rr_graph": ["rr_graph.xml", "--read_rr_graph"],
-    "lookahead": ["lookahead.bin", "--read_router_lookahead"]
+    "lookahead": ["lookahead.bin", "--read_router_lookahead"],
 }
 
 # Parse a -use_previous parameter. Throw if not valid
@@ -453,10 +455,14 @@ def argparse_use_previous(x: str) -> List[Tuple[str, List]]:
         if not r:
             raise argparse.ArgumentError("Invalid input to -use_previous: %s" % w)
         if not REUSABLE_FILES.get(r.group(2)):
-            raise argparse.ArgumentError("Unknown file type to use_previous: %s, available types: %s" % (r.group(2), ",".join(REUSABLE_FILES.keys())))
+            raise argparse.ArgumentError(
+                "Unknown file type to use_previous: %s, available types: %s"
+                % (r.group(2), ",".join(REUSABLE_FILES.keys()))
+            )
         out.append((r.group(1), REUSABLE_FILES[r.group(2)]))
 
     return out
+
 
 def argparse_str2bool(str_val):
     """
@@ -516,7 +522,9 @@ def get_existing_run_dir(base_dir, run_dir_name: str) -> str:
     """
     path = Path(base_dir) / run_dir_name
     if not path.exists():
-        raise FileNotFoundError("Couldn't find previous run directory %s in %s" % (base_dir, run_dir_name))
+        raise FileNotFoundError(
+            "Couldn't find previous run directory %s in %s" % (base_dir, run_dir_name)
+        )
     return str(path)
 
 
