@@ -7,7 +7,7 @@ from os import environ
 from vtr import CommandRunner, relax_w, determine_min_w, verify_file, paths
 from vtr.error import InspectError
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,too-many-locals
 def run_relax_w(
     architecture,
     circuit,

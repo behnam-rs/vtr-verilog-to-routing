@@ -354,7 +354,7 @@ def create_second_parse_cmd(config):
 
     return second_parse_cmd
 
-
+# pylint: disable=too-many-branches
 def create_cmd(
     abs_circuit_filepath, abs_arch_filepath, config, args, circuit, noc_traffic
 ) -> Tuple:
@@ -416,16 +416,17 @@ def create_cmd(
 
         cmd += ["--fix_clusters", "{}".format(place_constr_file)]
 
-    if args.write_rr_graphs:
+    # parse_vtr_task doesn't have these in args, so use getattr here
+    if getattr(args, "write_rr_graphs", None):
         cmd += [
             "--write_rr_graph",
             "{}.rr_graph.xml".format(Path(circuit).stem),
         ]  # Use XML format instead of capnp (see #2352)
 
-    if args.write_lookaheads:
+    if getattr(args, "write_lookaheads", None):
         cmd += ["--write_router_lookahead", "{}.lookahead.bin".format(Path(circuit).stem)]
 
-    if args.write_rr_graphs or args.write_lookaheads:
+    if getattr(args, "write_rr_graphs", None) or getattr(args, "write_lookaheads", None):
         # Don't trigger a second run, we just want the files
         cmd += ["-no_second_run"]
 
@@ -626,9 +627,9 @@ def create_job(
     current_cmd = cmd.copy()
     current_cmd += ["-temp_dir", run_dir + "/{}".format(param_string)]
 
-    if args.use_previous:
-        for run_dir, [extension, option] in args.use_previous:
-            prev_run_dir = get_existing_run_dir(find_task_dir(config, args.alt_tasks_dir), run_dir)
+    if getattr(args, "use_previous", None):
+        for prev_run, [extension, option] in args.use_previous:
+            prev_run_dir = get_existing_run_dir(find_task_dir(config, args.alt_tasks_dir), prev_run)
             prev_work_path = Path(prev_run_dir) / work_dir / param_string
             prev_file = prev_work_path / "{}.{}".format(Path(circuit).stem, extension)
             if not prev_file.exists():

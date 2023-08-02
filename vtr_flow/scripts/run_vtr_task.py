@@ -5,7 +5,6 @@ allowing the user to run one or more VTR tasks. """
 
 import argparse
 import os
-import re
 import subprocess
 import sys
 import textwrap
@@ -18,8 +17,6 @@ from pathlib import Path
 from pathlib import PurePath
 
 from run_vtr_flow import vtr_command_main as run_vtr_flow
-
-from typing import List, Tuple
 
 # pylint: disable=wrong-import-position, import-error
 sys.path.insert(0, str(Path(__file__).resolve().parent / "python_libs"))
@@ -210,24 +207,26 @@ def vtr_command_argparser(prog=None):
         "-write_rr_graphs",
         default=False,
         action="store_true",
-        help="Write out rr_graph files from VPR. These are normally computed on the fly and can become very large."
-        "Typically used with -use_previous [...] to save time on later executions for large tasks.",
+        help="Write out rr_graph files from VPR. These are normally computed on the fly"
+        "and can become very large. Typically used with -use_previous [...] to save time"
+        "on later executions for large tasks.",
     )
 
     parser.add_argument(
         "-write_lookaheads",
         default=False,
         action="store_true",
-        help="Write out router lookahead files from VPR. These are normally computed on the fly and can become very large."
-        "Typically used with -use_previous [...] to save time on later executions for large tasks.",
+        help="Write out router lookahead files from VPR. These are normally computed on the fly"
+        "and can become very large. Typically used with -use_previous [...] to save time on"
+        "later executions for large tasks.",
     )
 
     parser.add_argument(
         "-use_previous",
         default=None,
         type=argparse_use_previous,
-        help="Reuse intermediate [file]s from previous [run]s of the tasks. Accepts a comma separated list of [run]:[file]"
-        'such as "-use_previous run001:place,run001:net,run001:rr_graph".'
+        help="Reuse intermediate [file]s from previous [run]s of the tasks. Accepts a comma"
+        'separated list of [run]:[file] such as "-use_previous run001:place,run001:net".'
         'Works throughout different config parameters: "common" will reuse "common"\'s files etc.'
         "Use with caution and try to validate your results with a clean run.",
     )

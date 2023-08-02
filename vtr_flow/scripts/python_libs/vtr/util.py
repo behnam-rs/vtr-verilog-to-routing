@@ -12,13 +12,13 @@ import csv
 from collections import OrderedDict
 from pathlib import PurePath
 from pathlib import Path
+from typing import List, Tuple
+
 from prettytable import PrettyTable
 
 import vtr.error
 from vtr.error import CommandError
 from vtr import paths
-
-from typing import List, Tuple
 
 
 class RawDefaultHelpFormatter(
@@ -444,14 +444,17 @@ REUSABLE_FILES = {
     "lookahead": ["lookahead.bin", "--read_router_lookahead"],
 }
 
-# Parse a -use_previous parameter. Throw if not valid
-# Returns a list with (file type, [extension, cmdline option]) elements
+
 def argparse_use_previous(x: str) -> List[Tuple[str, List]]:
+    """
+    Parse a -use_previous parameter. Throw if not valid.
+    Returns a list with (run dir name, [extension, cmdline option]) elements.
+    """
     tokens = [w.strip() for w in x.split(",")]
     tokens = [w for w in tokens if len(w)]
     out = []
     for w in tokens:
-        r = re.fullmatch("(\w+):(\w+)", w)
+        r = re.fullmatch(r"(\w+):(\w+)", w)
         if not r:
             raise argparse.ArgumentError("Invalid input to -use_previous: %s" % w)
         if not REUSABLE_FILES.get(r.group(2)):
@@ -516,14 +519,14 @@ def get_latest_run_dir(base_dir):
     return str(PurePath(base_dir) / run_dir_name(latest_run_number))
 
 
-def get_existing_run_dir(base_dir, run_dir_name: str) -> str:
+def get_existing_run_dir(base_dir: str, run_dir: str) -> str:
     """
     Get an existing run directory (from a previous run). Throw if it doesn't exist
     """
-    path = Path(base_dir) / run_dir_name
+    path = Path(base_dir) / run_dir
     if not path.exists():
         raise FileNotFoundError(
-            "Couldn't find previous run directory %s in %s" % (base_dir, run_dir_name)
+            "Couldn't find previous run directory %s in %s" % (base_dir, run_dir)
         )
     return str(path)
 
