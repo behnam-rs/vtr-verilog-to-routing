@@ -3,6 +3,7 @@
 #include "connection_router.h"
 #include "router_stats.h"
 
+#include <cmath>
 #include <fstream>
 #include <memory>
 #include <thread>
@@ -10,6 +11,19 @@
 #ifdef VPR_USE_TBB
 #    include <tbb/concurrent_vector.h>
 #endif
+
+/** Self-descriptive */
+enum class Axis { X,
+                  Y };
+
+/** Which side of a line? */
+enum class Side { LEFT = 0,
+                  RIGHT = 1 };
+
+/** Invert side */
+inline Side operator!(const Side& rhs) {
+    return Side(!size_t(rhs));
+}
 
 /** Routing iteration results per thread. (for a subset of the input netlist) */
 struct RouteIterResults {
@@ -46,12 +60,12 @@ class PartitionTreeNode {
     bool is_routable = false;
     /** Net IDs for which timing_driven_route_net() actually got called */
     std::vector<ParentNetId> rerouted_nets;
-
-    /* debug stuff */
-    typedef enum { X,
-                   Y } Axis;
-    Axis cutline_axis = X;
-    int cutline_pos = -1;
+    /* Axis of the cutline. */
+    Axis cutline_axis = Axis::X;
+    /* Position of the cutline. It's a float, because cutlines are considered to be "between" integral coordinates. */
+    float cutline_pos = std::numeric_limits<float>::quiet_NaN();
+    /* Bounding box of *this* node. (The cutline cuts this box) */
+    t_bb bb;
 };
 
 /** Holds the root PartitionTreeNode and exposes top level operations. */
@@ -100,7 +114,7 @@ class PartitionTreeDebug {
 #else
 class PartitionTreeDebug {
   public:
-    static inline void log(std::string /* msg */) {}
+    static inline void log(std::string msg) { std::cout << msg << "\n"; }
     static inline void write(std::string /* filename */) {}
 };
 #endif

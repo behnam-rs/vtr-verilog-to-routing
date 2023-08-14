@@ -815,7 +815,6 @@ NetResultFlags try_parallel_route_net(ConnectionRouter& router,
                                       CBRR& connections_inf,
                                       RouterStats& router_stats,
                                       std::vector<float>& pin_criticality,
-                                      std::vector<vtr::optional<const RouteTreeNode&>>& rt_node_of_sink,
                                       NetPinsMatrix<float>& net_delay,
                                       const ClusteredPinAtomPinsLookup& netlist_pin_lookup,
                                       std::shared_ptr<SetupHoldTimingInfo> timing_info,
@@ -828,8 +827,6 @@ NetResultFlags try_parallel_route_net(ConnectionRouter& router,
     auto& route_ctx = g_vpr_ctx.mutable_routing();
 
     NetResultFlags flags;
-
-    connections_inf.prepare_routing_for_net(net_id);
 
     bool reroute_for_hold = false;
     if (budgeting_inf.if_set()) {
@@ -856,7 +853,6 @@ NetResultFlags try_parallel_route_net(ConnectionRouter& router,
                                         connections_inf,
                                         router_stats,
                                         pin_criticality,
-                                        rt_node_of_sink,
                                         net_delay[net_id].data(),
                                         netlist_pin_lookup,
                                         timing_info,
@@ -908,7 +904,6 @@ void route_partition_tree_helper(tbb::task_group& g,
             ctx.connections_inf,
             ctx.router_stats.local(),
             ctx.route_structs.local().pin_criticality,
-            ctx.route_structs.local().rt_node_of_sink,
             ctx.net_delay,
             ctx.netlist_pin_lookup,
             ctx.timing_info,
