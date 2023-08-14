@@ -218,7 +218,7 @@ def main():
             cmd.append("--disable=" + ",".join(ignore_list))
         # Don't object to single-letter variable names (that's not in PEP8)
         # see https://stackoverflow.com/q/21833872
-        cmd.append("--variable-rgx=[a-z][a-z0-9_]{1,30}$")
+        cmd.append("--variable-rgx=[a-z][a-z0-9_]{0,40}$")
 
         # Run pylint and check output
         process = subprocess.run(cmd, check=False, stdout=subprocess.PIPE)
