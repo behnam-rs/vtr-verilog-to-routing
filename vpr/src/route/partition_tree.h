@@ -114,7 +114,7 @@ class PartitionTreeDebug {
 #else
 class PartitionTreeDebug {
   public:
-    static inline void log(std::string msg) { std::cout << msg << "\n"; }
+    static inline void log(std::string /* msg */) {}
     static inline void write(std::string /* filename */) {}
 };
 #endif

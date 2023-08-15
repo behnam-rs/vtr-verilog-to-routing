@@ -590,7 +590,7 @@ def vtr_command_main(arg_list, prog=None):
         )
 
     except KeyboardInterrupt as error:
-        print("{}  keyboard interrupt".format(prog))
+        print("{} received keyboard interrupt".format(prog))
         exit_status = 4
         return_status = exit_status
 

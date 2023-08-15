@@ -1354,8 +1354,6 @@ static void setup_routing_resources(int itry,
     /* Build and return a partial route tree from the legal connections from last iteration.
      * along the way do:
      * 	update pathfinder costs to be accurate to the partial route tree
-     * 	find and store the pins that still need to be reached in connections_inf.remaining_targets
-     * 	find and store the rt nodes that have been reached in connections_inf.reached_rt_sinks
      *	mark the rr_node sinks as targets to be reached. */
     auto& route_ctx = g_vpr_ctx.mutable_routing();
 
